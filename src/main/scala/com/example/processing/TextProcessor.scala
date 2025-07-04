@@ -14,6 +14,8 @@ import fs2.text
   */
 case class Line(text: String, number: Int, source: String)
 
+case class LineWithEmbedding(line: Line, embedding: Vector[Float])
+
 object TextProcessor {
 
   /** Reads a resource file and streams its content as Lines, each with its

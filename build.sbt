@@ -11,6 +11,7 @@ val CirceVersion = "0.14.7"
 val LogbackVersion = "1.5.6"
 val Fs2Version = "3.10.2"
 val CatsRetryVersion = "3.1.0"
+val AiPlatformVersion = "3.11.0"
 
 lazy val root = (project in file("."))
   .settings(
@@ -19,11 +20,12 @@ lazy val root = (project in file("."))
       "org.typelevel" %% "cats-effect" % CatsEffectVersion,
       "co.fs2" %% "fs2-io" % Fs2Version,
       "com.github.cb372" %% "cats-retry" % CatsRetryVersion,
+      "com.google.cloud" % "google-cloud-aiplatform" % AiPlatformVersion,
 
       // For PostgreSQL with pgvector
       "org.tpolecat" %% "skunk-core" % SkunkVersion,
 
-      // For Google Vertex AI Gemini API
+      // For Google Vertex AI Gemini API (http4s client is still used for downloader)
       "org.http4s" %% "http4s-ember-client" % Http4sVersion,
       "org.http4s" %% "http4s-dsl" % Http4sVersion,
       "org.http4s" %% "http4s-circe" % Http4sVersion,

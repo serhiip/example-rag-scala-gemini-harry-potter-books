@@ -1,7 +1,7 @@
 package com.example.data
 
 import cats.effect.IO
-import cats.implicits._
+import cats.implicits.*
 import fs2.io.file.{Files => Fs2Files}
 import java.io.{BufferedOutputStream, FileInputStream, FileOutputStream}
 import java.nio.file.{Files, Path, Paths}
@@ -9,7 +9,7 @@ import java.util.zip.ZipInputStream
 import org.http4s.client.Client
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.{Method, Request, Uri}
-import scala.jdk.StreamConverters._
+import scala.jdk.StreamConverters.*
 
 /** Downloads the Harry Potter books dataset.
   */
