@@ -5,8 +5,7 @@ import com.example.ai.{VertexAI, VertexAIConfig}
 import com.example.data.ResourceLoader
 import com.example.processing.{EmbeddingStore, TextProcessor}
 import cats.implicits.*
-import fs2.Stream
-import scala.sys.process._
+import scala.sys.process.*
 
 object Main extends IOApp.Simple {
 
@@ -23,39 +22,28 @@ object Main extends IOApp.Simple {
   def run: IO[Unit] = {
     for {
       projectId <- getGoogleProject
-      config = VertexAIConfig(projectId, "europe-west1")
-      _ <- IO.println(s"Using Google Cloud project: ${config.projectId}")
+      config = VertexAIConfig(projectId, "europe-west2")
+      _ <- IO.println(s"Using Google Cloud project: $projectId")
 
       bookName <- ResourceLoader.listBookFiles().map(_.head)
-      lines <- TextProcessor
+      _ <- IO.println(s"Processing book: $bookName")
+
+      embeddingStream = TextProcessor
         .linesStream(s"books/$bookName", bookName)
-        .take(5)
-        .compile
-        .toList
+        .chunkN(250)
+        .evalMap { chunk =>
+          for {
+            _ <- IO.println(s"Processing chunk of ${chunk.size} lines...")
+            embeddings <- VertexAI.getEmbeddings(chunk.toList, config)
+          } yield embeddings
+        }
+        .flatMap(fs2.Stream.emits)
 
-      _ <- IO.println(
-        s"\nGetting embeddings for ${lines.length} lines from '$bookName'..."
-      )
-      linesWithEmbeddings <- VertexAI.getEmbeddings(lines, config)
-
-      embeddingFile = "test-embeddings.txt"
+      embeddingFile = s"${bookName}.embeddings"
       _ <- IO.println(s"\nWriting embeddings to '$embeddingFile'...")
-      _ <- EmbeddingStore.writeEmbeddings(
-        Stream.emits(linesWithEmbeddings),
-        embeddingFile
-      )
+      _ <- EmbeddingStore.writeEmbeddings(embeddingStream, embeddingFile)
+      _ <- IO.println("Embeddings written successfully.")
 
-      _ <- IO.println(s"\nReading embeddings from '$embeddingFile'...")
-      readEmbeddings <- EmbeddingStore
-        .readEmbeddings(embeddingFile)
-        .compile
-        .toList
-
-      _ <- IO.println("\nSuccessfully read and reconstructed embeddings:")
-      _ <- readEmbeddings.traverse_ { lwe =>
-        IO.println(s"  - [L${lwe.line.number}] '${lwe.line.text
-            .take(50)}...' -> Embedding(size=${lwe.embedding.length})")
-      }
     } yield ()
   }
 }
