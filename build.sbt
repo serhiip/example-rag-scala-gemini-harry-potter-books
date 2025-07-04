@@ -10,6 +10,7 @@ val Http4sVersion = "0.23.26"
 val CirceVersion = "0.14.7"
 val LogbackVersion = "1.5.6"
 val Fs2Version = "3.10.2"
+val CatsRetryVersion = "3.1.0"
 
 lazy val root = (project in file("."))
   .settings(
@@ -17,6 +18,7 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-effect" % CatsEffectVersion,
       "co.fs2" %% "fs2-io" % Fs2Version,
+      "com.github.cb372" %% "cats-retry" % CatsRetryVersion,
 
       // For PostgreSQL with pgvector
       "org.tpolecat" %% "skunk-core" % SkunkVersion,
