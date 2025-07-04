@@ -1,0 +1,34 @@
+import org.typelevel.sbt.tpolecat.*
+
+ThisBuild / organization := "com.example"
+ThisBuild / scalaVersion := "3.4.2"
+ThisBuild / version := "0.1.0-SNAPSHOT"
+
+val CatsEffectVersion = "3.5.4"
+val SkunkVersion = "0.6.3"
+val Http4sVersion = "0.23.26"
+val CirceVersion = "0.14.7"
+val LogbackVersion = "1.5.6"
+val Fs2Version = "3.10.2"
+
+lazy val root = (project in file("."))
+  .settings(
+    name := "harry-potter-books-rag-using-scala",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-effect" % CatsEffectVersion,
+      "co.fs2" %% "fs2-io" % Fs2Version,
+
+      // For PostgreSQL with pgvector
+      "org.tpolecat" %% "skunk-core" % SkunkVersion,
+
+      // For Google Vertex AI Gemini API
+      "org.http4s" %% "http4s-ember-client" % Http4sVersion,
+      "org.http4s" %% "http4s-dsl" % Http4sVersion,
+      "org.http4s" %% "http4s-circe" % Http4sVersion,
+      "io.circe" %% "circe-generic" % CirceVersion,
+      "io.circe" %% "circe-parser" % CirceVersion,
+
+      // Logging
+      "ch.qos.logback" % "logback-classic" % LogbackVersion % Runtime
+    )
+  )
