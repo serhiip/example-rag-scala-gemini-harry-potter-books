@@ -2,9 +2,10 @@ package com.example
 
 import cats.effect.*
 import com.example.ai.{VertexAI, VertexAIConfig}
-import com.example.data.ResourceLoader
-import com.example.processing.{EmbeddingStore, TextProcessor}
+import com.example.db.{Database, EmbeddingRepository, PostgresContainer}
+import com.example.processing.EmbeddingStore
 import cats.implicits.*
+import com.pgvector.PGvector
 import scala.sys.process.*
 
 object Main extends IOApp.Simple {
@@ -20,30 +21,55 @@ object Main extends IOApp.Simple {
   }
 
   def run: IO[Unit] = {
-    for {
-      projectId <- getGoogleProject
-      config = VertexAIConfig(projectId, "europe-west2")
-      _ <- IO.println(s"Using Google Cloud project: $projectId")
+    PostgresContainer.resource.use { dbConfig =>
+      Database.resource(dbConfig).use { conn =>
+        val repository = EmbeddingRepository.make(conn)
 
-      bookName <- ResourceLoader.listBookFiles().map(_.head)
-      _ <- IO.println(s"Processing book: $bookName")
+        for {
+          projectId <- getGoogleProject
+          config = VertexAIConfig(projectId, "europe-west2")
+          _ <- IO.println(s"Using Google Cloud project: $projectId")
 
-      embeddingStream = TextProcessor
-        .linesStream(s"books/$bookName", bookName)
-        .chunkN(250)
-        .evalMap { chunk =>
-          for {
-            _ <- IO.println(s"Processing chunk of ${chunk.size} lines...")
-            embeddings <- VertexAI.getEmbeddings(chunk.toList, config)
-          } yield embeddings
-        }
-        .flatMap(fs2.Stream.emits)
+          embeddingFiles <- EmbeddingStore.listEmbeddingFiles()
+          _ <- IO.println(
+            s"Found ${embeddingFiles.length} embedding files to process."
+          )
+          _ <- embeddingFiles.traverse_ { file =>
+            for {
+              _ <- IO.println(s"Loading embeddings from '$file'...")
+              embeddings <- EmbeddingStore.readEmbeddings(file).compile.toList
+              _ <- IO.println(
+                s"Saving ${embeddings.length} embeddings to the database..."
+              )
+              _ <- repository.saveAll(embeddings)
+              _ <- IO.println(s"Finished processing '$file'.")
+            } yield ()
+          }
 
-      embeddingFile = s"${bookName}.embeddings"
-      _ <- IO.println(s"\nWriting embeddings to '$embeddingFile'...")
-      _ <- EmbeddingStore.writeEmbeddings(embeddingStream, embeddingFile)
-      _ <- IO.println("Embeddings written successfully.")
+          _ <- IO.println("\n--- Starting RAG Demo ---")
 
-    } yield ()
+          query = "Who is Harry Potter?"
+          _ <- IO.println(s"Query: '$query'")
+
+          queryEmbedding <- VertexAI
+            .getEmbeddings(
+              List(com.example.processing.Line(query, 1, "query")),
+              config
+            )
+            .map(_.head.embedding)
+          queryVector = new PGvector(queryEmbedding.toArray)
+
+          _ <- IO.println("\nPerforming similarity search...")
+          searchResults <- repository.search(queryVector, limit = 10)
+
+          _ <- IO.println("Search results:")
+          _ <- searchResults.traverse_ { result =>
+            IO.println(
+              s"  - [L${result.line.number} in ${result.line.source}] ${result.line.text}"
+            )
+          }
+        } yield ()
+      }
+    }
   }
 }

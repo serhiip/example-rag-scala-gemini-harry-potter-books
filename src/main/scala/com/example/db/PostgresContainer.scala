@@ -6,23 +6,34 @@ import scala.concurrent.duration._
 import cats.implicits._
 import retry._
 
+case class PostgresContainerConstants(
+    name: String,
+    image: String,
+    user: String,
+    password: String,
+    database: String,
+    port: Int
+)
+
 object PostgresContainer {
 
-  private val containerName = "harry-potter-rag-db"
-  private val dbImage = "pgvector/pgvector:pg16"
-  private val dbUser = "user"
-  private val dbPassword = "password"
-  private val dbName = "ragdb"
-  private val dbPort = 5432
+  private val constants = PostgresContainerConstants(
+    name = "harry-potter-rag-db",
+    image = "pgvector/pgvector:0.8.0-pg17",
+    user = "user",
+    password = "password",
+    database = "public",
+    port = 5432
+  )
 
-  def resource: Resource[IO, Unit] = {
+  def resource: Resource[IO, PostgresContainerConstants] = {
     val acquire = for {
       _ <- IO.println("Starting PostgreSQL container...")
       _ <- stopAndRemoveContainer() // Clean up previous runs if they exist
       _ <- startContainer()
       _ <- waitForReady()
       _ <- IO.println("PostgreSQL container started successfully.")
-    } yield ()
+    } yield constants
 
     val release =
       IO.println("Stopping PostgreSQL container...") >> stopAndRemoveContainer()
@@ -36,29 +47,28 @@ object PostgresContainer {
       "run",
       "-d",
       "--name",
-      containerName,
+      constants.name,
       "-e",
-      s"POSTGRES_USER=$dbUser",
+      s"POSTGRES_USER=${constants.user}",
       "-e",
-      s"POSTGRES_PASSWORD=$dbPassword",
+      s"POSTGRES_PASSWORD=${constants.password}",
       "-e",
-      s"POSTGRES_DB=$dbName",
+      s"POSTGRES_DB=${constants.database}",
       "-p",
-      s"$dbPort:5432",
-      dbImage
+      s"${constants.port}:5432",
+      constants.image
     )
-    cmd.!!
+    val _ = cmd.!!
   }.void
 
   private def stopAndRemoveContainer(): IO[Unit] = IO.blocking {
-    // These commands might fail if the container doesn't exist, which is fine.
-    val _ = Seq("docker", "stop", containerName).!
-    val _ = Seq("docker", "rm", containerName).!
+    val _ = Seq("docker", "stop", constants.name).!
+    val _ = Seq("docker", "rm", constants.name).!
   }.void
 
   private def waitForReady(): IO[Unit] = {
     val check = IO
-      .blocking(Seq("docker", "logs", containerName).!!)
+      .blocking(Seq("docker", "logs", constants.name).!!)
       .flatMap { logs =>
         if (logs.contains("database system is ready to accept connections"))
           IO.unit
@@ -75,15 +85,13 @@ object PostgresContainer {
           IO.println(
             s"PostgreSQL not ready. Retrying in ${nextDelay.toSeconds.toInt}s... (Attempt: ${retries + 1})"
           )
-        case RetryDetails.GivingUp(totalRetries, _) =>
-          IO.raiseError(
-            new RuntimeException(
-              s"PostgreSQL container failed to start after $totalRetries attempts.",
-              err
-            )
-          )
+        case _ => IO.raiseError(err)
       }
 
-    retryingOnAllErrors(policy, onError)(check)
+    retryingOnAllErrors(policy, onError)(check.handleErrorWith {
+      case e: RuntimeException if e.getMessage == "Database not ready yet" =>
+        IO.raiseError(e)
+      case e => IO.pure(()) // Ignore other errors during check
+    })
   }
 }

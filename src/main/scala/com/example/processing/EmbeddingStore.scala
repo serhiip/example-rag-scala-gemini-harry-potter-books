@@ -11,6 +11,14 @@ object EmbeddingStore {
   private def createEmbeddingsDir: IO[Unit] =
     Files[IO].createDirectories(embeddingsDir)
 
+  def listEmbeddingFiles(): IO[List[String]] =
+    Files[IO]
+      .list(embeddingsDir)
+      .map(_.fileName.toString)
+      .filter(_.endsWith(".embeddings"))
+      .compile
+      .toList
+
   /** Writes a stream of LineWithEmbedding to a file in the resources folder.
     * The format for each line in the file is:
     * source_file|line_number|embedding_vector

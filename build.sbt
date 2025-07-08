@@ -1,11 +1,9 @@
 import org.typelevel.sbt.tpolecat.*
 
-ThisBuild / organization := "com.example"
 ThisBuild / scalaVersion := "3.4.2"
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
 val CatsEffectVersion = "3.5.4"
-val SkunkVersion = "0.6.3"
 val Http4sVersion = "0.23.26"
 val CirceVersion = "0.14.7"
 val LogbackVersion = "1.5.6"
@@ -13,6 +11,8 @@ val Fs2Version = "3.10.2"
 val CatsRetryVersion = "3.1.0"
 val AiPlatformVersion = "3.11.0"
 val GcsVersion = "2.38.0"
+val PostgresJdbcVersion = "42.7.3"
+val PgVectorVersion = "0.1.6"
 
 lazy val root = (project in file("."))
   .settings(
@@ -25,9 +25,10 @@ lazy val root = (project in file("."))
       "com.google.cloud" % "google-cloud-storage" % GcsVersion,
 
       // For PostgreSQL with pgvector
-      "org.tpolecat" %% "skunk-core" % SkunkVersion,
+      "org.postgresql" % "postgresql" % PostgresJdbcVersion,
+      "com.pgvector" % "pgvector" % PgVectorVersion,
 
-      // For Google Vertex AI Gemini API (http4s client is still used for downloader)
+      // For http4s client (downloader) and circe
       "org.http4s" %% "http4s-ember-client" % Http4sVersion,
       "org.http4s" %% "http4s-dsl" % Http4sVersion,
       "org.http4s" %% "http4s-circe" % Http4sVersion,
@@ -36,5 +37,6 @@ lazy val root = (project in file("."))
 
       // Logging
       "ch.qos.logback" % "logback-classic" % LogbackVersion % Runtime
-    )
+    ),
+    Compile / run / fork := true
   )

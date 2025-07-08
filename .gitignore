@@ -1,2 +1,3 @@
 **/target
 src/main/resources/books/*
+src/main/resources/embeddings/*
