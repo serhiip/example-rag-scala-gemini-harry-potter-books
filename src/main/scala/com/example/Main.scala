@@ -4,6 +4,7 @@ import cats.effect.*
 import com.example.ai.VertexAIConfig
 import com.example.db.{Database, EmbeddingRepository, PostgresContainer}
 import com.example.rag.RagService
+import com.example.util.FullLoader
 import scala.sys.process.*
 import com.example.processing.EmbeddingStore
 import cats.syntax.all.*
@@ -43,21 +44,31 @@ object Main extends IOApp.Simple {
           config = VertexAIConfig(projectId, "europe-west2")
           _ <- IO.println(s"Using Google Cloud project: $projectId")
 
+          _ <- FullLoader.load(config)
+
           embeddingFiles <- EmbeddingStore.listEmbeddingFiles()
-          _ <- IO.println(
-            s"Found ${embeddingFiles.length} embedding files to process."
-          )
-          _ <- embeddingFiles.traverse_ { file =>
-            for {
-              _ <- IO.println(s"Loading embeddings from '$file'...")
-              embeddings <- EmbeddingStore.readEmbeddings(file).compile.toList
-              _ <- IO.println(
-                s"Saving ${embeddings.length} embeddings to the database..."
-              )
-              _ <- repository.saveAll(embeddings)
-              _ <- IO.println(s"Finished processing '$file'.")
-            } yield ()
-          }
+          _ <-
+            if (embeddingFiles.isEmpty)
+              IO.println("No embedding files found, skipping database load.")
+            else {
+              IO.println(
+                s"Found ${embeddingFiles.length} embedding files to process."
+              ) >>
+                embeddingFiles.traverse_ { file =>
+                  for {
+                    _ <- IO.println(s"Loading embeddings from '$file'...")
+                    embeddings <- EmbeddingStore
+                      .readEmbeddings(file)
+                      .compile
+                      .toList
+                    _ <- IO.println(
+                      s"Saving ${embeddings.length} embeddings to the database..."
+                    )
+                    _ <- repository.saveAll(embeddings)
+                    _ <- IO.println(s"Finished processing '$file'.")
+                  } yield ()
+                }
+            }
 
           _ <- IO.println("\n--- Init done ---")
 
