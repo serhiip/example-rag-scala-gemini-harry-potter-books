@@ -1,12 +1,12 @@
 package com.example
 
 import cats.effect.*
-import com.example.ai.{VertexAI, VertexAIConfig}
+import com.example.ai.VertexAIConfig
 import com.example.db.{Database, EmbeddingRepository, PostgresContainer}
-import com.example.processing.EmbeddingStore
-import cats.implicits.*
-import com.pgvector.PGvector
+import com.example.rag.RagService
 import scala.sys.process.*
+import com.example.processing.EmbeddingStore
+import cats.syntax.all.*
 
 object Main extends IOApp.Simple {
 
@@ -20,10 +20,23 @@ object Main extends IOApp.Simple {
     projectId
   }
 
+  def runQuery(
+      query: String,
+      config: VertexAIConfig,
+      ragService: RagService
+  ): IO[Unit] = {
+    for {
+      _ <- IO.println("Executing Query")
+      answer <- ragService.ask(query, config)
+      _ <- IO.println(s"\nAnswer:\n$answer")
+    } yield ()
+  }
+
   def run: IO[Unit] = {
     PostgresContainer.resource.use { dbConfig =>
-      Database.resource(dbConfig).use { conn =>
-        val repository = EmbeddingRepository.make(conn)
+      Database.resource(dbConfig).use { dataSource =>
+        val repository = EmbeddingRepository.make(dataSource)
+        val ragService = new RagService(repository)
 
         for {
           projectId <- getGoogleProject
@@ -46,28 +59,15 @@ object Main extends IOApp.Simple {
             } yield ()
           }
 
-          _ <- IO.println("\n--- Starting RAG Demo ---")
+          _ <- IO.println("\n--- Init done ---")
 
-          query = "Who is Harry Potter?"
-          _ <- IO.println(s"Query: '$query'")
+          loop = for {
+            _ <- IO.println("Enter your query and press <ENTER>")
+            query <- IO.readLine
+            _ <- runQuery(query, config, ragService)
+          } yield ()
 
-          queryEmbedding <- VertexAI
-            .getEmbeddings(
-              List(com.example.processing.Line(query, 1, "query")),
-              config
-            )
-            .map(_.head.embedding)
-          queryVector = new PGvector(queryEmbedding.toArray)
-
-          _ <- IO.println("\nPerforming similarity search...")
-          searchResults <- repository.search(queryVector, limit = 10)
-
-          _ <- IO.println("Search results:")
-          _ <- searchResults.traverse_ { result =>
-            IO.println(
-              s"  - [L${result.line.number} in ${result.line.source}] ${result.line.text}"
-            )
-          }
+          _ <- loop.foreverM
         } yield ()
       }
     }

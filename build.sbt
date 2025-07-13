@@ -1,6 +1,6 @@
 import org.typelevel.sbt.tpolecat.*
 
-ThisBuild / scalaVersion := "3.4.2"
+ThisBuild / scalaVersion := "3.7.1"
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
 val CatsEffectVersion = "3.5.4"
@@ -9,10 +9,11 @@ val CirceVersion = "0.14.7"
 val LogbackVersion = "1.5.6"
 val Fs2Version = "3.10.2"
 val CatsRetryVersion = "3.1.0"
-val AiPlatformVersion = "3.11.0"
+val AiPlatformVersion = "3.68.0"
 val GcsVersion = "2.38.0"
 val PostgresJdbcVersion = "42.7.3"
 val PgVectorVersion = "0.1.6"
+val GenaiVersion = "1.8.0"
 
 lazy val root = (project in file("."))
   .settings(
@@ -23,6 +24,7 @@ lazy val root = (project in file("."))
       "com.github.cb372" %% "cats-retry" % CatsRetryVersion,
       "com.google.cloud" % "google-cloud-aiplatform" % AiPlatformVersion,
       "com.google.cloud" % "google-cloud-storage" % GcsVersion,
+      "com.google.genai" % "google-genai" % GenaiVersion,
 
       // For PostgreSQL with pgvector
       "org.postgresql" % "postgresql" % PostgresJdbcVersion,
@@ -38,5 +40,5 @@ lazy val root = (project in file("."))
       // Logging
       "ch.qos.logback" % "logback-classic" % LogbackVersion % Runtime
     ),
-    Compile / run / fork := true
+    Compile / run / fork := false
   )
