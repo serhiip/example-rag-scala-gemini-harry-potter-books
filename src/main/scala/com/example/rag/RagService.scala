@@ -23,7 +23,7 @@ class RagService(
         ContextExtractor.getContext(
           result.line.source,
           result.line.number,
-          contextSize = 5
+          contextSize = 20
         )
       }
 

@@ -25,7 +25,7 @@ object FullLoader {
 
           embeddingStream = TextProcessor
             .linesStream(s"books/$bookName", bookName)
-            .chunkN(250)
+            .chunkN(100)
             .evalMap { chunk =>
               for {
                 _ <- IO.println(s"Processing chunk of ${chunk.size} lines...")
