@@ -1,6 +1,6 @@
 package com.example.processing
 
-import cats.effect.IO
+import cats.effect.Sync
 import fs2.Stream
 import fs2.text
 
@@ -16,23 +16,14 @@ case class Line(text: String, number: Int, source: String)
 
 case class LineWithEmbedding(line: Line, embedding: Vector[Float])
 
-object TextProcessor {
+trait TextProcessor[F[_]] {
+  def linesStream(resourcePath: String, sourceName: String): Stream[F, Line]
+}
 
-  /** Reads a resource file and streams its content as Lines, each with its
-    * corresponding line number.
-    *
-    * @param resourcePath
-    *   The path to the resource file (e.g., "books/01 Harry Potter and the
-    *   Sorcerers Stone.txt").
-    * @return
-    *   A stream of Line objects.
-    */
-  def linesStream(
-      resourcePath: String,
-      sourceName: String
-  ): Stream[IO, Line] = {
+class TextProcessorImpl[F[_]: Sync] extends TextProcessor[F] {
+  override def linesStream(resourcePath: String, sourceName: String): Stream[F, Line] = {
     val stream = fs2.io.readInputStream(
-      IO.blocking(
+      Sync[F].blocking(
         Option(getClass.getClassLoader.getResourceAsStream(resourcePath))
           .getOrElse(
             throw new RuntimeException(s"Resource not found: $resourcePath")
@@ -50,4 +41,8 @@ object TextProcessor {
         Line(lineText, (index + 1).toInt, sourceName)
       }
   }
+}
+
+object TextProcessor {
+  def apply[F[_]: Sync](): TextProcessor[F] = new TextProcessorImpl[F]()
 }

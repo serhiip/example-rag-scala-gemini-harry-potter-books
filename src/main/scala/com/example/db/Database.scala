@@ -51,13 +51,13 @@ object Database {
           val searchPath = rs1.getString("search_path")
           println(s"Search path: $searchPath")
         }
-        val rs = statement.executeQuery(
+        val rs  = statement.executeQuery(
           "SELECT extname, extversion, nspname FROM pg_extension LEFT JOIN pg_namespace ON pg_namespace.oid = pg_extension.extnamespace WHERE extname = 'vector';"
         )
         while (rs.next()) {
-          val extname = rs.getString("extname")
+          val extname    = rs.getString("extname")
           val extversion = rs.getString("extversion")
-          val nspname = rs.getString("nspname")
+          val nspname    = rs.getString("nspname")
           println(
             s"Extension $extname version $extversion in namespace $nspname"
           )

@@ -1,18 +1,35 @@
 package com.example.ai
 
 import cats.effect.*
+import com.example.ai.VertexAIConfig
 import com.google.genai.Client
 import com.google.genai.types.HttpOptions
 import com.google.genai.types.Part
 import com.google.genai.types.Content
 
+trait GenerativeAI[F[_]] {
+  def generateAnswer(prompt: String): F[String]
+}
+
+class GenerativeAIImpl[F[_]: Sync](client: Client) extends GenerativeAI[F] {
+  override def generateAnswer(prompt: String): F[String] =
+    Sync[F].blocking {
+      val response = client.models.generateContent(
+        "gemini-1.5-flash-002",
+        Content.fromParts(Part.fromText(prompt)),
+        null
+      )
+      response.text()
+    }
+}
+
 object GenerativeAI {
 
-  private def genAiClientResource(
+  private def genAiClientResource[F[_]: Sync](
       config: VertexAIConfig
-  ): Resource[IO, Client] =
+  ): Resource[F, Client] =
     Resource.fromAutoCloseable(
-      IO.blocking(
+      Sync[F].blocking(
         Client
           .builder()
           .httpOptions(HttpOptions.builder().apiVersion("v1").build())
@@ -23,16 +40,8 @@ object GenerativeAI {
       )
     )
 
-  def generateAnswer(prompt: String, config: VertexAIConfig): IO[String] =
-    genAiClientResource(config).use { client =>
-      IO.blocking {
-        val response = client.models.generateContent(
-          "gemini-1.5-flash-002",
-          Content.fromParts(Part.fromText(prompt)),
-          null
-        )
-        println(response)
-        response.text()
-      }
-    }
+  def apply[F[_]: Sync](config: VertexAIConfig): Resource[F, GenerativeAI[F]] =
+    for {
+      client <- genAiClientResource(config)
+    } yield new GenerativeAIImpl[F](client)
 }

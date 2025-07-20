@@ -1,13 +1,16 @@
 package com.example
 
 import cats.effect.*
-import com.example.ai.VertexAIConfig
+import com.example.ai.{GenerativeAI, VertexAIConfig}
 import com.example.db.{Database, EmbeddingRepository, PostgresContainer}
 import com.example.rag.RagService
 import com.example.util.FullLoader
 import scala.sys.process.*
 import com.example.processing.EmbeddingStore
 import cats.syntax.all.*
+import com.example.data.*
+import com.example.processing.*
+import com.example.ai.VertexAI
 
 object Main extends IOApp.Simple {
 
@@ -24,63 +27,67 @@ object Main extends IOApp.Simple {
   def runQuery(
       query: String,
       config: VertexAIConfig,
-      ragService: RagService
+      ragService: RagService[IO]
   ): IO[Unit] = {
     for {
-      _ <- IO.println("Executing Query")
+      _      <- IO.println("Executing Query")
       answer <- ragService.ask(query, config)
-      _ <- IO.println(s"\nAnswer:\n$answer")
+      _      <- IO.println(s"\nAnswer:\n$answer")
     } yield ()
   }
 
   def run: IO[Unit] = {
-    PostgresContainer.resource.use { dbConfig =>
-      Database.resource(dbConfig).use { dataSource =>
-        val repository = EmbeddingRepository.make(dataSource)
-        val ragService = new RagService(repository)
-
+    PostgresContainer.resource.flatMap { dbConfig =>
+      Database.resource(dbConfig).flatMap { dataSource =>
         for {
-          projectId <- getGoogleProject
-          config = VertexAIConfig(projectId, "europe-west2")
-          _ <- IO.println(s"Using Google Cloud project: $projectId")
+          projectId     <- getGoogleProject.toResource
+          repository     = EmbeddingRepository.make[IO](dataSource)
+          resourceLoader = ResourceLoader[IO]()
+          embeddingStore = EmbeddingStore[IO](TextProcessor[IO]())
+          textProcessor  = TextProcessor[IO]()
+          vertexAI       = VertexAI[IO]()
+          fullLoader     = FullLoader[IO](resourceLoader, embeddingStore, textProcessor, vertexAI)
+          generativeAI  <- GenerativeAI[IO](VertexAIConfig(projectId, "europe-west2"))
+          config         = VertexAIConfig(projectId, "europe-west2")
+          _             <- IO.println(s"Using Google Cloud project: $projectId").toResource
 
-          _ <- FullLoader.load(config)
+          _ <- fullLoader.load(config).toResource
 
-          embeddingFiles <- EmbeddingStore.listEmbeddingFiles()
-          _ <-
-            if (embeddingFiles.isEmpty)
-              IO.println("No embedding files found, skipping database load.")
-            else {
-              IO.println(
-                s"Found ${embeddingFiles.length} embedding files to process."
-              ) >>
-                embeddingFiles.traverse_ { file =>
-                  for {
-                    _ <- IO.println(s"Loading embeddings from '$file'...")
-                    embeddings <- EmbeddingStore
-                      .readEmbeddings(file)
-                      .compile
-                      .toList
-                    _ <- IO.println(
-                      s"Saving ${embeddings.length} embeddings to the database..."
-                    )
-                    _ <- repository.saveAll(embeddings)
-                    _ <- IO.println(s"Finished processing '$file'.")
-                  } yield ()
-                }
-            }
+          embeddingFiles <- embeddingStore.listEmbeddingFiles().toResource
+          _              <-
+            (if (embeddingFiles.isEmpty)
+               IO.println("No embedding files found, skipping database load.")
+             else {
+               IO.println(
+                 s"Found ${embeddingFiles.length} embedding files to process."
+               ) >>
+                 embeddingFiles.traverse_ { file =>
+                   for {
+                     _          <- IO.println(s"Loading embeddings from '$file'...")
+                     embeddings <- embeddingStore.readEmbeddings(file).compile.toList
+                     _          <- IO.println(
+                                     s"Saving ${embeddings.length} embeddings to the database..."
+                                   )
+                     _          <- repository.saveAll(embeddings)
+                     _          <- IO.println(s"Finished processing '$file'.")
+                   } yield ()
+                 }
+             }).toResource
 
-          _ <- IO.println("\n--- Init done ---")
+          _ <- IO.println("\n--- Init done ---").toResource
+
+          contextExtractor = ContextExtractor[IO](textProcessor)
+          ragService       = RagService[IO](repository, generativeAI, vertexAI, contextExtractor)
 
           loop = for {
-            _ <- IO.println("Enter your query and press <ENTER>")
-            query <- IO.readLine
-            _ <- runQuery(query, config, ragService)
-          } yield ()
+                   _     <- IO.println("Enter your query and press <ENTER>")
+                   query <- IO.readLine
+                   _     <- runQuery(query, config, ragService)
+                 } yield ()
 
-          _ <- loop.foreverM
+          _ <- loop.foreverM.toResource
         } yield ()
       }
-    }
+    }.use_
   }
 }

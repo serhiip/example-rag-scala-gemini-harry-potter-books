@@ -1,18 +1,23 @@
 package com.example.data
 
-import cats.effect.IO
+import cats.effect.Sync
 import cats.implicits._
 import scala.io.Source
 
-object ResourceLoader {
+trait ResourceLoader[F[_]] {
+  def loadResourceAsString(resourcePath: String): F[String]
+  def listBookFiles(): F[List[String]]
+  def loadAllBooks(): F[List[(String, String)]]
+}
 
-  // Load a resource file as a string
-  def loadResourceAsString(resourcePath: String): IO[String] = IO.blocking {
+class ResourceLoaderImpl[F[_]: Sync] extends ResourceLoader[F] {
+
+  override def loadResourceAsString(resourcePath: String): F[String] = Sync[F].blocking {
     val resource = getClass.getClassLoader.getResourceAsStream(resourcePath)
     if (resource == null) {
       throw new RuntimeException(s"Resource not found: $resourcePath")
     }
-    val source = Source.fromInputStream(resource, "UTF-8")
+    val source   = Source.fromInputStream(resource, "UTF-8")
     try {
       source.mkString
     } finally {
@@ -21,9 +26,7 @@ object ResourceLoader {
     }
   }
 
-  // List all book files - since we can't dynamically list resources in a JAR,
-  // we need to maintain a list of known book files
-  def listBookFiles(): IO[List[String]] = IO {
+  override def listBookFiles(): F[List[String]] = Sync[F].delay {
     val knownBooks = List(
       "01 Harry Potter and the Sorcerers Stone.txt",
       "02 Harry Potter and the Chamber of Secrets.txt",
@@ -40,15 +43,16 @@ object ResourceLoader {
     }
   }
 
-  // Load all books as a list of (filename, content) tuples
-  def loadAllBooks(): IO[List[(String, String)]] = {
+  override def loadAllBooks(): F[List[(String, String)]] = {
     for {
       bookFiles <- listBookFiles()
-      books <- bookFiles.traverse { fileName =>
-        loadResourceAsString(s"books/$fileName").map(content =>
-          (fileName, content)
-        )
-      }
+      books     <- bookFiles.traverse { fileName =>
+                     loadResourceAsString(s"books/$fileName").map(content => (fileName, content))
+                   }
     } yield books
   }
+}
+
+object ResourceLoader {
+  def apply[F[_]: Sync](): ResourceLoader[F] = new ResourceLoaderImpl[F]()
 }

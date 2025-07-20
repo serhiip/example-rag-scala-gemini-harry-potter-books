@@ -58,7 +58,7 @@ object PostgresContainer {
       s"${constants.port}:5432",
       constants.image
     )
-    val _ = cmd.!!
+    val _   = cmd.!!
   }.void
 
   private def stopAndRemoveContainer(): IO[Unit] = IO.blocking {
@@ -85,13 +85,13 @@ object PostgresContainer {
           IO.println(
             s"PostgreSQL not ready. Retrying in ${nextDelay.toSeconds.toInt}s... (Attempt: ${retries + 1})"
           )
-        case _ => IO.raiseError(err)
+        case _                                                     => IO.raiseError(err)
       }
 
     retryingOnAllErrors(policy, onError)(check.handleErrorWith {
       case e: RuntimeException if e.getMessage == "Database not ready yet" =>
         IO.raiseError(e)
-      case e => IO.pure(()) // Ignore other errors during check
+      case e                                                               => IO.pure(()) // Ignore other errors during check
     })
   }
 }

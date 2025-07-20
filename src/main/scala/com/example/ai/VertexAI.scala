@@ -3,39 +3,39 @@ package com.example.ai
 import cats.effect.*
 import cats.implicits.*
 import com.example.processing.{Line, LineWithEmbedding}
-import com.google.cloud.aiplatform.v1.{
-  PredictRequest,
-  PredictionServiceClient,
-  PredictionServiceSettings
-}
+import com.google.cloud.aiplatform.v1.{PredictRequest, PredictionServiceClient, PredictionServiceSettings}
 import com.google.protobuf.{Struct, Value}
 
 import scala.jdk.CollectionConverters.*
 
 case class VertexAIConfig(projectId: String, region: String)
 
-object VertexAI {
+trait VertexAI[F[_]] {
+  def getEmbeddings(lines: List[Line], config: VertexAIConfig): F[List[LineWithEmbedding]]
+}
+
+class VertexAIImpl[F[_]: Sync] extends VertexAI[F] {
 
   private val model = "text-embedding-004"
 
   private def clientResource(
       config: VertexAIConfig
-  ): Resource[IO, PredictionServiceClient] = {
+  ): Resource[F, PredictionServiceClient] = {
     val endpoint = s"${config.region}-aiplatform.googleapis.com:443"
     val settings =
       PredictionServiceSettings.newBuilder().setEndpoint(endpoint).build()
     Resource.make(
-      IO.blocking(PredictionServiceClient.create(settings))
-    )(client => IO.blocking(client.close()))
+      Sync[F].blocking(PredictionServiceClient.create(settings))
+    )(client => Sync[F].blocking(client.close()))
   }
 
   private def valueOf(s: String): Value =
     Value.newBuilder().setStringValue(s).build()
 
-  def getEmbeddings(
+  override def getEmbeddings(
       lines: List[Line],
       config: VertexAIConfig
-  ): IO[List[LineWithEmbedding]] = {
+  ): F[List[LineWithEmbedding]] = {
 
     val batchSize = 250
 
@@ -47,7 +47,7 @@ object VertexAI {
         .grouped(batchSize)
         .toList
         .traverse { batch =>
-          IO.blocking {
+          Sync[F].blocking {
             val instances = batch.map { line =>
               val instanceStruct = Struct
                 .newBuilder()
@@ -65,16 +65,15 @@ object VertexAI {
 
             val response = client.predict(request)
 
-            val embeddings = response.getPredictionsList.asScala.map {
-              prediction =>
-                val embeddingsValue =
-                  prediction.getStructValue.getFieldsOrThrow("embeddings")
-                val valuesList = embeddingsValue.getStructValue
-                  .getFieldsOrThrow("values")
-                  .getListValue
-                valuesList.getValuesList.asScala
-                  .map(_.getNumberValue.toFloat)
-                  .toVector
+            val embeddings = response.getPredictionsList.asScala.map { prediction =>
+              val embeddingsValue =
+                prediction.getStructValue.getFieldsOrThrow("embeddings")
+              val valuesList      = embeddingsValue.getStructValue
+                .getFieldsOrThrow("values")
+                .getListValue
+              valuesList.getValuesList.asScala
+                .map(_.getNumberValue.toFloat)
+                .toVector
             }
 
             batch.zip(embeddings).map { case (line, embedding) =>
@@ -85,4 +84,8 @@ object VertexAI {
         .map(_.flatten)
     }
   }
+}
+
+object VertexAI {
+  def apply[F[_]: Sync](): VertexAI[F] = new VertexAIImpl[F]()
 }
