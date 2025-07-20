@@ -1,16 +1,15 @@
 package com.example
 
 import cats.effect.*
-import com.example.ai.{GenerativeAI, VertexAIConfig}
+import cats.syntax.all.*
+import com.example.ai.{GenerativeAI, VertexAI, VertexAIConfig}
+import com.example.data.*
 import com.example.db.{Database, EmbeddingRepository, PostgresContainer}
+import com.example.processing.*
 import com.example.rag.RagService
 import com.example.util.FullLoader
+
 import scala.sys.process.*
-import com.example.processing.EmbeddingStore
-import cats.syntax.all.*
-import com.example.data.*
-import com.example.processing.*
-import com.example.ai.VertexAI
 
 object Main extends IOApp.Simple {
 

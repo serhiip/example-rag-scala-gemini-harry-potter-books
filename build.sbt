@@ -17,7 +17,9 @@ val PgVectorVersion     = "0.1.6"
 
 lazy val root = (project in file("."))
   .settings(
-    name := "harry-potter-books-rag-using-scala",
+    name              := "harry-potter-books-rag-using-scala",
+    semanticdbEnabled := true,
+    semanticdbVersion := scalafixSemanticdb.revision,
     libraryDependencies ++= Seq(
       "org.typelevel"    %% "cats-effect"             % CatsEffectVersion,
       "co.fs2"           %% "fs2-io"                  % Fs2Version,

@@ -1,8 +1,7 @@
 package com.example.processing
 
 import cats.effect.Sync
-import fs2.Stream
-import fs2.text
+import fs2.{Stream, text}
 
 /** Represents a single line of text from a source file.
   * @param text

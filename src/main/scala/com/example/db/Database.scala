@@ -1,10 +1,10 @@
 package com.example.db
 
 import cats.effect.*
-import java.sql.Connection
-import java.sql.DriverManager
 import com.pgvector.PGvector
 import org.postgresql.Driver
+
+import java.sql.{Connection, DriverManager}
 
 object Database {
 

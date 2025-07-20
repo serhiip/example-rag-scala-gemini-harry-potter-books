@@ -1,7 +1,7 @@
 package com.example.rag
 
 import cats.effect.Sync
-import cats.implicits.*
+import cats.syntax.all.*
 import com.example.ai.{GenerativeAI, VertexAI, VertexAIConfig}
 import com.example.db.EmbeddingRepository
 import com.example.processing.{ContextExtractor, Line}

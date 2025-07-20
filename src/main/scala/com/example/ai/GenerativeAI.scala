@@ -1,11 +1,8 @@
 package com.example.ai
 
 import cats.effect.*
-import com.example.ai.VertexAIConfig
 import com.google.genai.Client
-import com.google.genai.types.HttpOptions
-import com.google.genai.types.Part
-import com.google.genai.types.Content
+import com.google.genai.types.{Content, HttpOptions, Part}
 
 trait GenerativeAI[F[_]] {
   def generateAnswer(prompt: String): F[String]

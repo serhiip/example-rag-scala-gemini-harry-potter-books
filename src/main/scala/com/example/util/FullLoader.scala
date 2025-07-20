@@ -1,7 +1,7 @@
 package com.example.util
 
 import cats.effect.Sync
-import cats.implicits.*
+import cats.syntax.all.*
 import com.example.ai.{VertexAI, VertexAIConfig}
 import com.example.data.ResourceLoader
 import com.example.processing.{EmbeddingStore, TextProcessor}

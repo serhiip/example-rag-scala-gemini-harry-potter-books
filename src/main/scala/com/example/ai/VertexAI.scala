@@ -1,7 +1,7 @@
 package com.example.ai
 
 import cats.effect.*
-import cats.implicits.*
+import cats.syntax.all.*
 import com.example.processing.{Line, LineWithEmbedding}
 import com.google.cloud.aiplatform.v1.{PredictRequest, PredictionServiceClient, PredictionServiceSettings}
 import com.google.protobuf.{Struct, Value}

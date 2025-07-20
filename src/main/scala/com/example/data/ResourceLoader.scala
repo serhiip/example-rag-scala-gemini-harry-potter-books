@@ -1,7 +1,8 @@
 package com.example.data
 
 import cats.effect.Sync
-import cats.implicits._
+import cats.syntax.all.*
+
 import scala.io.Source
 
 trait ResourceLoader[F[_]] {

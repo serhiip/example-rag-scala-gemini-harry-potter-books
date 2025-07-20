@@ -1,10 +1,10 @@
 package com.example.db
 
 import cats.effect.{IO, Resource}
-import scala.sys.process._
-import scala.concurrent.duration._
-import cats.implicits._
-import retry._
+import retry.*
+
+import scala.concurrent.duration.*
+import scala.sys.process.*
 
 case class PostgresContainerConstants(
     name: String,

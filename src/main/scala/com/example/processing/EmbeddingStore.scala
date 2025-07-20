@@ -2,8 +2,8 @@ package com.example.processing
 
 import cats.effect.kernel.Async
 import cats.syntax.all.*
-import fs2.{Stream, text}
 import fs2.io.file.{Files, Path}
+import fs2.{Stream, text}
 
 trait EmbeddingStore[F[_]] {
   def listEmbeddingFiles(): F[List[String]]

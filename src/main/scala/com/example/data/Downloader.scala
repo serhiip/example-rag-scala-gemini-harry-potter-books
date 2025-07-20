@@ -1,16 +1,17 @@
 package com.example.data
 
 import cats.effect.Async
-import cats.implicits.*
+import cats.syntax.all.*
 import fs2.io.file.{Files => Fs2Files}
-import java.io.{BufferedOutputStream, FileInputStream, FileOutputStream}
-import java.nio.file.{Files, Path, Paths}
-import java.util.zip.ZipInputStream
+import fs2.io.net.Network
 import org.http4s.client.Client
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.{Method, Request, Uri}
+
+import java.io.{BufferedOutputStream, FileInputStream, FileOutputStream}
+import java.nio.file.{Files, Path, Paths}
+import java.util.zip.ZipInputStream
 import scala.jdk.StreamConverters.*
-import fs2.io.net.Network
 
 /** Downloads the Harry Potter books dataset.
   */

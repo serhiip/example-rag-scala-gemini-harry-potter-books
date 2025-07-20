@@ -1,9 +1,10 @@
 package com.example.db
 
+import cats.effect.kernel.Sync
 import com.example.processing.LineWithEmbedding
 import com.pgvector.PGvector
+
 import java.sql.Connection
-import cats.effect.kernel.Sync
 
 trait EmbeddingRepository[F[_]] {
   def saveAll(embeddings: List[LineWithEmbedding]): F[Unit]
