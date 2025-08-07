@@ -47,9 +47,11 @@ object Main extends IOApp.Simple {
           vertexAI       = VertexAI[IO]()
           fullLoader     = FullLoader[IO](resourceLoader, embeddingStore, textProcessor, vertexAI)
           generativeAI  <- GenerativeAI[IO](VertexAIConfig(projectId, "europe-west2"))
+          downloader     = Downloader[IO]()
           config         = VertexAIConfig(projectId, "europe-west2")
           _             <- IO.println(s"Using Google Cloud project: $projectId").toResource
 
+          _ <- downloader.downloadBooks().toResource
           _ <- fullLoader.load(config).toResource
 
           embeddingFiles <- embeddingStore.listEmbeddingFiles().toResource
