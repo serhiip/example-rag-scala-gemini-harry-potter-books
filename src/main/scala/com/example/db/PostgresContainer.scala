@@ -77,7 +77,7 @@ object PostgresContainer {
 
     val policy = RetryPolicies
       .limitRetries[IO](15)
-      .join(RetryPolicies.constantDelay(2.seconds))
+      .join(RetryPolicies.constantDelay(10.seconds))
 
     def onError(err: Throwable, details: RetryDetails): IO[Unit] =
       details match {
