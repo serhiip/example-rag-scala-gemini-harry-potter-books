@@ -39,7 +39,7 @@ Before you can run the application, you will need the following installed:
     You need to authenticate your local environment to use the Vertex AI API. Run the following commands:
 
     ```shell
-    gcloud auth login
+    gcloud auth login --update-adc
     gcloud auth application-default login
     ```
 
