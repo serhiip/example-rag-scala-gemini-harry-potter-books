@@ -89,6 +89,37 @@ Before you can run the application, you will need the following installed:
   - `TextProcessor.scala`: Reads and processes text files.
   - `EmbeddingStore.scala`: Saves and loads embeddings to/from the filesystem.
 
+## Architecture
+
+The high-level Retrieval-Augmented Generation data & query flow is outlined below.
+
+```mermaid
+flowchart TD
+  subgraph Ingestion
+    Books[Books resources] --> Ingest[Downloader + ResourceLoader + TextProcessor]
+    Ingest --> EmbedGen[VertexAI embeddings]
+    EmbedGen --> Store[EmbeddingStore files]
+    Store --> Load[EmbeddingRepository saveAll]
+    Load --> DB[PostgreSQL pgvector]
+  end
+
+  subgraph Query
+    User[User query] --> Rag[RagService]
+    Rag --> QEmbed[VertexAI embed query]
+    QEmbed --> DB
+    DB -->|similar lines| Rag
+    Rag --> GenAI[GenerativeAI]
+    GenAI --> Answer[Answer]
+  end
+```
+
+### Component Mapping to Requirements
+- Raw data ingestion: `Downloader` + `ResourceLoader` + `TextProcessor` (within `FullLoader` pipeline).
+- Embedding generation: `FullLoader` calling `VertexAI.getEmbeddings` (Gemini embedding model).
+- Embedding insertion into Postgres: `EmbeddingRepository.saveAll` (triggered in `Main`) writing to `embeddings` table.
+- Vector store: PostgreSQL with `pgvector` extension (`embeddings.embedding` column of type `vector(3072)`).
+- Query pipeline: `RagService` (uses `VertexAI` for query embedding, `EmbeddingRepository.search` for similarity, `ContextExtractor` for window expansion, `GenerativeAI` for final answer generation).
+
 ## sbt-tpolecat
 
 This template uses the `sbt-tpolecat` sbt plugin to set Scala compiler options to recommended defaults. If you want to change these defaults or find out about the different modes the plugin can operate in you can find out [here](https://github.com/typelevel/sbt-tpolecat/).
