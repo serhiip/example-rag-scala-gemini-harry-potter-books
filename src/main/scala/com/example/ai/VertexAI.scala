@@ -16,7 +16,7 @@ trait VertexAI[F[_]] {
 
 class VertexAIImpl[F[_]: Sync] extends VertexAI[F] {
 
-  private val model = "text-embedding-004"
+  private val model = "gemini-embedding-001"
 
   private def clientResource(
       config: VertexAIConfig

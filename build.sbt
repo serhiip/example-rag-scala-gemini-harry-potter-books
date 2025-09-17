@@ -1,6 +1,6 @@
 import org.typelevel.sbt.tpolecat.*
 
-ThisBuild / scalaVersion := "3.7.1"
+ThisBuild / scalaVersion := "3.3.6"
 ThisBuild / version      := "0.1.0-SNAPSHOT"
 
 val LogbackVersion      = "1.5.18"

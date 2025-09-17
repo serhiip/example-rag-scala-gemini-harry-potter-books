@@ -36,7 +36,7 @@ object Database {
             source TEXT NOT NULL,
             line_number INT NOT NULL,
             text TEXT NOT NULL,
-            embedding vector(768)
+            embedding vector(3072)
           );
         """)
         val rs0 = statement.executeQuery(

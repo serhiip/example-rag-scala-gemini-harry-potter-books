@@ -14,6 +14,9 @@ import scala.sys.process.*
 object Main extends IOApp.Simple {
 
   private def getGoogleProject: IO[String] = IO.blocking {
+    // gcloud config configurations create PROJECT_ID
+    // gcloud auth login --update-adc
+    // gcloud config set project PROJECT_ID
     val projectId = "gcloud config get-value project".!!.trim
     if (projectId.isEmpty) {
       throw new RuntimeException(
@@ -23,11 +26,7 @@ object Main extends IOApp.Simple {
     projectId
   }
 
-  def runQuery(
-      query: String,
-      config: VertexAIConfig,
-      ragService: RagService[IO]
-  ): IO[Unit] = {
+  def runQuery(query: String, config: VertexAIConfig, ragService: RagService[IO]): IO[Unit] = {
     for {
       _      <- IO.println("Executing Query")
       answer <- ragService.ask(query, config)

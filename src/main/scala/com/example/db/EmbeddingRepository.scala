@@ -57,6 +57,8 @@ class EmbeddingRepositoryImpl[F[_]: Sync](conn: Connection) extends EmbeddingRep
           val line       = com.example.processing.Line(text, lineNumber, source)
           results += LineWithEmbedding(line, embedding.toArray.toVector)
         }
+        println(s"Found ${results.length} references")
+        //results.toList.zipWithIndex.foreach(println)
         results.toList
       } finally {
         statement.close()
